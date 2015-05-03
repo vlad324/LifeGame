@@ -1,10 +1,7 @@
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.*;
 
 public class LifeSim extends JFrame {
@@ -27,7 +24,9 @@ public class LifeSim extends JFrame {
         menuBar = new JMenuBar();
         setJMenuBar(menuBar);
         JMenu fileMenu = new JMenu("File");
+        JMenu settingsMenu = new JMenu("Settings");
         menuBar.add(fileMenu);
+        menuBar.add(settingsMenu);
 
         toolBar = new JToolBar();
         toolBar.setFloatable(false);
@@ -35,14 +34,14 @@ public class LifeSim extends JFrame {
 
         Action openConfiguration = new AbstractAction("Open") {
             public void actionPerformed(ActionEvent event) {
+                if (lifePanel.isSimulating()) {
+                    JOptionPane.showMessageDialog(LifeSim.this, "Please, stop simulation!", "Warning", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
                 try (FileInputStream fos = new FileInputStream(getFileForOpen());
                      ObjectInputStream oos = new ObjectInputStream(fos)) {
                     lifePanel.setLife((LifeModel) oos.readObject());
-                    lifePanel.repaint();
-                    Insets insets = getInsets();
-                    setSize(lifePanel.getPreferredSize().width + insets.left + insets.right,
-                            lifePanel.getPreferredSize().height + insets.bottom + insets.top +
-                                    menuBar.getHeight() + toolBar.getHeight());
+                    pack();
                     repaint();
                 } catch (IOException | ClassNotFoundException e) {
                     JOptionPane.showMessageDialog(LifeSim.this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -68,57 +67,94 @@ public class LifeSim extends JFrame {
         };
         fileMenu.add(saveConfiguration);
 
-        startStopButton = new JButton("Start");
-        startStopButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+        Action changeSizeOfArea = new AbstractAction("Change size") {
+            public void actionPerformed(ActionEvent event) {
                 if (lifePanel.isSimulating()) {
-                    lifePanel.stopSimulation();
-                    oneStepButton.setEnabled(true);
-                    startStopButton.setText("Start");
-                } else {
-                    lifePanel.startSimulation();
-                    oneStepButton.setEnabled(false);
-                    startStopButton.setText("Stop");
+                    JOptionPane.showMessageDialog(LifeSim.this, "Please, stop simulation!", "Warning", JOptionPane.WARNING_MESSAGE);
+                    return;
                 }
+                Box mainBox = Box.createVerticalBox();
+                Box inputBox = Box.createHorizontalBox();
+                JFrame changeSize = new JFrame("Change size");
+                JLabel widthLabel = new JLabel("Width:");
+                JTextField widthText = new JTextField(10);
+                widthText.setMaximumSize(widthText.getPreferredSize());
+                JLabel heightLabel = new JLabel("Height:");
+                JTextField heightText = new JTextField(10);
+                heightText.setMaximumSize(heightText.getPreferredSize());
+                JButton okButton = new JButton("Ok!");
+                okButton.addActionListener(e -> {
+                    try {
+                        int width = Integer.parseInt(widthText.getText());
+                        int height = Integer.parseInt(heightText.getText());
+                        lifePanel.initialize(width, height);
+                        pack();
+                        repaint();
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(LifeSim.this, "Invalid arguments!", "Error",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                    changeSize.dispose();
+                });
+                inputBox.add(Box.createHorizontalStrut(10));
+                inputBox.add(widthLabel);
+                inputBox.add(Box.createHorizontalStrut(10));
+                inputBox.add(widthText);
+                inputBox.add(Box.createHorizontalStrut(10));
+                inputBox.add(heightLabel);
+                inputBox.add(Box.createHorizontalStrut(10));
+                inputBox.add(heightText);
+                inputBox.add(Box.createHorizontalStrut(10));
+                mainBox.add(Box.createVerticalStrut(10));
+                mainBox.add(inputBox);
+                mainBox.add(Box.createVerticalStrut(10));
+                mainBox.add(okButton);
+                mainBox.add(Box.createVerticalStrut(10));
+                changeSize.add(mainBox);
+                changeSize.pack();
+                changeSize.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+                changeSize.setLocationRelativeTo(LifeSim.this);
+                changeSize.setVisible(true);
+            }
+        };
+        settingsMenu.add(changeSizeOfArea);
+
+        startStopButton = new JButton("Start");
+        startStopButton.addActionListener(e -> {
+            if (lifePanel.isSimulating()) {
+                lifePanel.stopSimulation();
+                oneStepButton.setEnabled(true);
+                startStopButton.setText("Start");
+            } else {
+                lifePanel.startSimulation();
+                oneStepButton.setEnabled(false);
+                startStopButton.setText("Stop");
             }
         });
         toolBar.add(startStopButton);
 
         oneStepButton = new JButton("One step");
-        oneStepButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                lifePanel.getLifeModel().simulate();
-                lifePanel.repaint();
-            }
+        oneStepButton.addActionListener(e -> {
+            lifePanel.getLifeModel().simulate();
+            lifePanel.repaint();
         });
         toolBar.add(oneStepButton);
 
         toolBar.addSeparator();
 
         clearFieldButton = new JButton("Clear field");
-        clearFieldButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                synchronized (lifePanel.getLifeModel()) {
-                    lifePanel.getLifeModel().clear();
-                    lifePanel.repaint();
-                }
+        clearFieldButton.addActionListener(e -> {
+            synchronized (lifePanel.getLifeModel()) {
+                lifePanel.getLifeModel().clear();
+                lifePanel.repaint();
             }
         });
         toolBar.add(clearFieldButton);
 
-        // бегунок, регулирующий скорость симул€ции (задержка в мс между шагами симул€ции)
         animationSpeedSlider = new JSlider(1, 1000);
         animationSpeedSlider.setValue(500);
         lifePanel.setUpdateDelay(animationSpeedSlider.getValue());
-        animationSpeedSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                lifePanel.setUpdateDelay(animationSpeedSlider.getValue());
-            }
-        });
+        animationSpeedSlider.addChangeListener(e -> lifePanel.setUpdateDelay(animationSpeedSlider.getValue()));
 
         toolBar.addSeparator();
         toolBar.add(new JLabel("Fast"));
@@ -139,11 +175,7 @@ public class LifeSim extends JFrame {
         } catch (Exception ignored) {
         }
 
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new LifeSim("LifeSim");
-            }
-        });
+        SwingUtilities.invokeLater(() -> new LifeSim("LifeSim"));
     }
 
     private String getFileForSave() throws FileNotFoundException {

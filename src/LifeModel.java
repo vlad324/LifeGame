@@ -1,14 +1,6 @@
 import java.io.Serializable;
 import java.util.Arrays;
 
-/**
- * ћодель данных "∆изни".
- * ѕоле завернуто в тороид, т.е. и левый и правый кра€, и верхний и нижний, €вл€ютс€ замкнутыми.
- * ѕри симул€ции используетс€ принцип двойной буферизации: данные берутс€ из главного массива mainField, после расчета
- * результат складываетс€ во вспомогательный массив backField. ѕо окончании расчета одного шага ссылки на эти массивы
- * мен€ютс€ местами.
- * ¬ массивах хран€тс€ значени€: 0, если клетка мертва, и 1, если жива.
- */
 public class LifeModel implements Serializable {
 
     private static final long serialVersionUID = 3400265056061021533L;
@@ -21,12 +13,6 @@ public class LifeModel implements Serializable {
     private int[] neighborOffsets;
     private int[][] neighborXYOffsets;
 
-    /**
-     * »нициализаци€ модели.
-     *
-     * @param width  ширина пол€ данных
-     * @param height высота пол€ данных
-     */
     public LifeModel(int width, int height) {
         this.width = width;
         this.height = height;
@@ -56,9 +42,6 @@ public class LifeModel implements Serializable {
         return mainField[y * width + x];
     }
 
-    /**
-     * ќдин шаг симул€ции.
-     */
     public void simulate() {
         // обрабатываем клетки, не касающиес€ краев пол€
         for (int y = 1; y < height - 1; y++) {
@@ -93,12 +76,6 @@ public class LifeModel implements Serializable {
         backField = t;
     }
 
-    /**
-     * ѕодсчет соседей дл€ не касающихс€ краев клеток.
-     *
-     * @param j смещение клетки в массиве
-     * @return кол-во соседей
-     */
     private byte countNeighbors(int j) {
         byte n = 0;
         for (int i = 0; i < 8; i++) {
@@ -107,13 +84,6 @@ public class LifeModel implements Serializable {
         return n;
     }
 
-    /**
-     * ѕодсчет соседей дл€ граничных клеток.
-     *
-     * @param x
-     * @param y
-     * @return кол-во соседей
-     */
     private byte countBorderNeighbors(int x, int y) {
         byte n = 0;
         for (int i = 0; i < 8; i++) {
@@ -124,13 +94,6 @@ public class LifeModel implements Serializable {
         return n;
     }
 
-    /**
-     * —имул€ци€ дл€ одной клетки.
-     *
-     * @param self      собственное состо€ние клетки: 0/1
-     * @param neighbors кол-во соседей
-     * @return новое состо€ние клетки: 0/1
-     */
     private byte simulateCell(byte self, byte neighbors) {
         return (byte) (self == 0 ? (neighbors == 3 ? 1 : 0) : neighbors == 2 || neighbors == 3 ? 1 : 0);
     }

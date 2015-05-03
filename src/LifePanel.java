@@ -3,43 +3,22 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-/**
- * Панель симулятора с редактором поля.
- * Левой кнопкой мыши можно ставить клетки, правой - стирать. Редактирование доступно в любое время, даже когда
- * симуляция запущена.
- * Процесс симуляции выполняется в отдельном потоке.
- */
 public class LifePanel extends JPanel implements Runnable {
-    /**
-     * Цвет мертвой клетки.
-     */
-    private static final Color c0 = new Color(0x696969);
-    /**
-     * Цвет живой клетки.
-     */
-    private static final Color c1 = new Color(0x00FF2E);
+
+    private static final Color COLOR_DEAD = new Color(0x696969);
+    private static final Color COLOR_ALIVE = new Color(0x00FF2E);
     private Thread simThread;
     private LifeModel life;
-    /**
-     * Задержка в мс между шагами симуляции.
-     */
-    private int updateDelay = 100;
-    /**
-     * Размер клетки на экране.
-     */
+    private int updateDelay;
     private int cellSize = 8;
-    /**
-     * Промежуток между клетками.
-     */
     private int cellGap = 1;
 
     public LifePanel() {
         setBackground(Color.BLACK);
 
-        // редактор поля
         MouseAdapter ma = new MouseAdapter() {
-            private boolean pressedLeft = false;    // нажата левая кнопка мыши
-            private boolean pressedRight = false;    // нажата правая кнопка мыши
+            private boolean pressedLeft = false;
+            private boolean pressedRight = false;
 
             @Override
             public void mouseDragged(MouseEvent e) {
@@ -68,15 +47,9 @@ public class LifePanel extends JPanel implements Runnable {
                 }
             }
 
-            /**
-             * Устанавливает/стирает клетку.
-             *
-             * @param e
-             */
             private void setCell(MouseEvent e) {
                 if (life != null) {
                     synchronized (life) {
-                        // рассчитываем координаты клетки, на которую указывает курсор мыши
                         int x = e.getX() / (cellSize + cellGap);
                         int y = e.getY() / (cellSize + cellGap);
                         if (x >= 0 && y >= 0 && x < life.getWidth() && y < life.getHeight()) {
@@ -113,9 +86,6 @@ public class LifePanel extends JPanel implements Runnable {
         this.updateDelay = updateDelay;
     }
 
-    /**
-     * Запуск симуляции.
-     */
     public void startSimulation() {
         if (simThread == null) {
             simThread = new Thread(this);
@@ -123,9 +93,6 @@ public class LifePanel extends JPanel implements Runnable {
         }
     }
 
-    /**
-     * Остановка симуляции.
-     */
     public void stopSimulation() {
         simThread = null;
     }
@@ -142,8 +109,6 @@ public class LifePanel extends JPanel implements Runnable {
                 Thread.sleep(updateDelay);
             } catch (InterruptedException ignored) {
             }
-            // синхронизация используется для того, чтобы метод paintComponent не выводил на экран
-            // содержимое поля, которое в данный момент меняется
             synchronized (life) {
                 life.simulate();
             }
@@ -152,9 +117,6 @@ public class LifePanel extends JPanel implements Runnable {
         repaint();
     }
 
-    /*
-     * Возвращает размер панели с учетом размера поля и клеток.
-     */
     @Override
     public Dimension getPreferredSize() {
         if (life != null) {
@@ -165,9 +127,6 @@ public class LifePanel extends JPanel implements Runnable {
             return new Dimension(100, 100);
     }
 
-    /*
-     * Прорисовка содержимого панели.
-     */
     @Override
     protected void paintComponent(Graphics g) {
         if (life != null) {
@@ -177,7 +136,7 @@ public class LifePanel extends JPanel implements Runnable {
                 for (int y = 0; y < life.getHeight(); y++) {
                     for (int x = 0; x < life.getWidth(); x++) {
                         byte c = life.getCell(x, y);
-                        g.setColor(c == 1 ? c1 : c0);
+                        g.setColor(c == 1 ? COLOR_ALIVE : COLOR_DEAD);
                         g.fillRect(b.left + cellGap + x * (cellSize + cellGap), b.top + cellGap + y
                                 * (cellSize + cellGap), cellSize, cellSize);
                     }
